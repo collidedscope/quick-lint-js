@@ -387,4 +387,87 @@ TEST(test_utf_8_decode, surrogate_sequences_are_an_error_for_each_code_unit) {
     }
   }
 }
+
+namespace {
+std::ptrdiff_t count_utf_16_code_units_in_utf_8(
+    const padded_string& utf_8) noexcept {
+  return quick_lint_js::count_utf_16_code_units_in_utf_8(&utf_8);
+}
+}
+
+TEST(test_count_utf_16_code_units_in_utf_8, empty_string) {
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8(u8""_padded), 0);
+}
+
+TEST(test_count_utf_16_code_units_in_utf_8, ascii_characters_count_as_one) {
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8(u8"abcdef"_padded), 6);
+}
+
+TEST(test_count_utf_16_code_units_in_utf_8,
+     non_ascii_basic_multilingual_plane_characters_count_as_one) {
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8(u8"\u2306"_padded), 1);
+}
+
+TEST(test_count_utf_16_code_units_in_utf_8,
+     supplementary_plane_characters_count_as_two) {
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8(u8"\U0001F430"_padded), 2);
+}
+
+TEST(test_count_utf_16_code_units_in_utf_8,
+     invalid_surrogate_sequences_count_as_one_per_byte) {
+  for (padded_string input : {
+           "\xed\xa0\x80"_padded,  // U+D800
+           "\xed\xad\xbf"_padded,  // U+DB7F
+           "\xed\xae\x80"_padded,  // U+DB80
+           "\xed\xaf\xbf"_padded,  // U+DBFF
+           "\xed\xb0\x80"_padded,  // U+DC00
+           "\xed\xbe\x80"_padded,  // U+DF80
+           "\xed\xbf\xbf"_padded,  // U+DFFF
+       }) {
+    SCOPED_TRACE(input);
+    EXPECT_EQ(count_utf_16_code_units_in_utf_8(input), input.size());
+  }
+}
+
+TEST(test_count_utf_16_code_units_in_utf_8,
+     overlong_sequences_count_as_one_per_byte) {
+  for (padded_string input : {
+           "\xc0\x80"_padded,                  // U+0000
+           "\xe0\x80\x80"_padded,              // U+0000
+           "\xf0\x80\x80\x80"_padded,          // U+0000
+           "\xf8\x80\x80\x80\x80"_padded,      // U+0000
+           "\xfc\x80\x80\x80\x80\x80"_padded,  // U+0000
+
+           "\xc0\xaf"_padded,                  // U+002F
+           "\xe0\x80\xaf"_padded,              // U+002F
+           "\xf0\x80\x80\xaf"_padded,          // U+002F
+           "\xf8\x80\x80\x80\xaf"_padded,      // U+002F
+           "\xfc\x80\x80\x80\x80\xaf"_padded,  // U+002F
+
+           "\xc1\xbf"_padded,                  // U+007F
+           "\xe0\x9f\xbf"_padded,              // U+07FF
+           "\xf0\x8f\xbf\xbf"_padded,          // U+FFFF
+           "\xf8\x87\xbf\xbf\xbf"_padded,      // U+001FFFFF
+           "\xfc\x83\xbf\xbf\xbf\xbf"_padded,  // U+03FFFFFF
+       }) {
+    SCOPED_TRACE(input);
+    EXPECT_EQ(count_utf_16_code_units_in_utf_8(input), input.size());
+  }
+}
+
+TEST(test_count_utf_16_code_units_in_utf_8, incomplete_sequences_count_as_one) {
+  // @@@ what should these be?
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0\x90\x8d"_padded), 1);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0\x90\x8d?????"_padded), 6);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0\x90"_padded), 1);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0\x90?"_padded), 2);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0\x90??????"_padded), 7);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0"_padded), 1);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0?"_padded), 2);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0??"_padded), 3);
+  EXPECT_EQ(count_utf_16_code_units_in_utf_8("\xf0????????"_padded), 9);
+}
+
+// @@@ middle of code point should be different than code point at end of
+// string.
 }

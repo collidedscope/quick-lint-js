@@ -139,4 +139,21 @@ decode_utf_8_result decode_utf_8(padded_string_view input) noexcept {
     };
   }
 }
+
+std::ptrdiff_t count_utf_16_code_units_in_utf_8(
+    padded_string_view utf_8) noexcept {
+  const char8* c = utf_8.data();
+  const char8* end = utf_8.null_terminator();
+  std::ptrdiff_t count = 0;
+  while (c != end) {
+    decode_utf_8_result result = decode_utf_8(padded_string_view(c, end));
+    c += result.size;
+    if (result.ok && result.code_point >= 0x10000) {
+      count += 2;
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+}
 }

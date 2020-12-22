@@ -31,6 +31,8 @@ struct decode_utf_8_result {
 };
 
 decode_utf_8_result decode_utf_8(padded_string_view) noexcept;
+
+std::ptrdiff_t count_utf_16_code_units_in_utf_8(padded_string_view) noexcept;
 }
 
 #endif
