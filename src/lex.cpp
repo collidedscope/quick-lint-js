@@ -747,7 +747,7 @@ next:
   case '/': {
     bool seen_flags[6] = {};
     ++c;
-    while (*c != '\0' && *c != ',' && *c != ';' && !std::isspace(*c)) {
+    while (std::isalnum(*c)) {
       if (!this->is_regexp_flag_character(*c)) {
         this->error_reporter_->report(error_invalid_regexp_literal_flag{
             source_code_span(c, c)});
