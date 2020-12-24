@@ -222,6 +222,16 @@
              escape_sequence))                                                 \
                                                                                \
   QLJS_ERROR_TYPE(                                                             \
+      error_invalid_regexp_literal_flag,                                       \
+      { source_code_span flag; },                                              \
+      .error(QLJS_TRANSLATE("invalid RegExp literal flag"), flag))             \
+                                                                               \
+  QLJS_ERROR_TYPE(                                                             \
+      error_repeated_regexp_literal_flag,                                      \
+      { source_code_span flag; },                                              \
+      .error(QLJS_TRANSLATE("repeated RegExp literal flag"), flag))            \
+                                                                               \
+  QLJS_ERROR_TYPE(                                                             \
       error_stray_comma_in_let_statement, { source_code_span where; },         \
       .error(QLJS_TRANSLATE("stray comma in let statement"), where))           \
                                                                                \

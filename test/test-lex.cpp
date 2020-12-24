@@ -856,9 +856,10 @@ TEST_F(test_lex, lex_regular_expression_literals) {
 }
 
 TEST_F(test_lex, lex_regular_expression_literal_with_digit_flag) {
+  error_collector v;
   padded_string input(u8"/cellular/3g"_sv);
 
-  lexer l(&input, &null_error_reporter::instance);
+  lexer l(&input, &v);
   EXPECT_EQ(l.peek().type, token_type::slash);
   l.reparse_as_regexp();
   EXPECT_EQ(l.peek().type, token_type::regexp);
@@ -867,25 +868,25 @@ TEST_F(test_lex, lex_regular_expression_literal_with_digit_flag) {
   l.skip();
   EXPECT_EQ(l.peek().type, token_type::end_of_file);
 
-  // TODO(strager): Report an error, because '3' is an invalid flag.
+  EXPECT_THAT(v.errors, ElementsAre(ERROR_TYPE_FIELD(
+                            error_invalid_regexp_literal_flag, flag,
+                            offsets_matcher(&input, 10, 10))));
 }
 
-TEST_F(test_lex, lex_unicode_escape_in_regular_expression_literal_flags) {
-  error_collector errors;
-  padded_string input(u8"/hello/\\u{67}i"_sv);
+TEST_F(test_lex, lex_regular_expression_literal_with_repeated_flag) {
+  error_collector v;
+  padded_string input(u8"/well-played/gg"_sv);
 
-  lexer l(&input, &errors);
+  lexer l(&input, &v);
+  EXPECT_EQ(l.peek().type, token_type::slash);
   l.reparse_as_regexp();
   EXPECT_EQ(l.peek().type, token_type::regexp);
-  EXPECT_EQ(l.peek().begin, &input[0]);
-  EXPECT_EQ(l.peek().end, &input[input.size()]);
   l.skip();
   EXPECT_EQ(l.peek().type, token_type::end_of_file);
 
-  EXPECT_THAT(errors.errors,
-              ElementsAre(ERROR_TYPE_FIELD(
-                  error_regexp_literal_flags_cannot_contain_unicode_escapes,
-                  escape_sequence, offsets_matcher(&input, 7, 13))));
+  EXPECT_THAT(v.errors, ElementsAre(ERROR_TYPE_FIELD(
+                            error_repeated_regexp_literal_flag, flag,
+                            offsets_matcher(&input, 14, 14))));
 }
 
 TEST_F(test_lex,

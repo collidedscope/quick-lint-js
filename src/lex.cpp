@@ -745,17 +745,18 @@ next:
     QLJS_UNREACHABLE();
 
   case '/': {
+    bool seen_flags[6] = {};
     ++c;
-    // TODO(strager): is_identifier_character is the wrong function to call
-    // here.
-    if (this->is_identifier_character(static_cast<char32_t>(*c))) {
-      parsed_identifier ident = this->parse_identifier(c);
-      c = ident.after;
-      for (const source_code_span& escape_sequence : ident.escape_sequences) {
-        this->error_reporter_->report(
-            error_regexp_literal_flags_cannot_contain_unicode_escapes{
-                .escape_sequence = escape_sequence});
+    while (*c != '\0' && *c != ',' && *c != ';' && !std::isspace(*c)) {
+      if (!this->is_regexp_flag_character(*c)) {
+        this->error_reporter_->report(error_invalid_regexp_literal_flag{
+            source_code_span(c, c)});
       }
+      if (this->is_regexp_flag_character(*c) && seen_flags[(*c % 24) / 4]) {
+        this->error_reporter_->report(error_repeated_regexp_literal_flag{
+            source_code_span(c, c)});
+      }
+      seen_flags[(*c++ % 24) / 4] = true;
     }
     break;
   }
@@ -1573,6 +1574,15 @@ bool lexer::is_ascii_character(char8 code_unit) {
 
 bool lexer::is_ascii_character(char32_t code_point) {
   return code_point < 0x80;
+}
+
+bool lexer::is_regexp_flag_character(char8 code_unit) {
+  return code_unit == 'g'  // global
+      || code_unit == 'i'  // case-insensitive
+      || code_unit == 'm'  // multiline
+      || code_unit == 's'  // "dotall"
+      || code_unit == 'u'  // Unicode
+      || code_unit == 'y'; // "sticky"
 }
 
 int lexer::newline_character_size(const char8* input) {
